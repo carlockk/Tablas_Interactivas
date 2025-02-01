@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablas Interactivas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .controls button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #95d5b2;
+            color: white;
+        }
+        .controls input {
+            padding: 8px;
+            width: 50%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        table th, table td {
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #95d5b2;
+            color: white;
+            font-weight: bold;
+            border-bottom: 1px solid #a4c3b2;
+            cursor: pointer;
+        }
+        table td {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e6e6e6;
+        }
+        table tr:nth-child(even) td {
+            background-color: #f9f9f9;
+        }
+        table tr:hover td {
+            background-color: #e9f5eb;
+        }
+        table tr.selected td {
+            background-color: #d4edda !important;
+        }
+        .draggable {
+            cursor: move;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tablas Interactivas</h1>
+
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="Buscar en las tablas...">
+        <button onclick="toggleTableVisibility('aritmeticosTable')">Mostrar, ocultar tabla</button>
+        <button onclick="addRow('aritmeticosTable')">Agregar Fila</button>
+    </div>
+
+    <h2>Datos</h2>
+    <table id="aritmeticosTable">
+        <thead>
+            <tr>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>Bootcamp y cohorte</th>
+                <th>Correo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Filas predeterminadas -->
+        </tbody>
+    </table>
+
+    <canvas id="chart" width="300" height="300"></canvas>
+
+    <script>
+        const aritmeticosTable = document.getElementById('aritmeticosTable').querySelector('tbody');
+        const chartCanvas = document.getElementById('chart');
+
+        // Cargar datos iniciales y localStorage
+        const initialData = [
+            ["Suma", "Suma dos datos", "+", "a + b"],
+            ["Resta", "Resta dos datos", "-", "a - b"],
+            ["Multiplicación", "Multiplica dos datos", "*", "a * b"],
+            ["División", "Divide dos datos", "/", "a / b"]
+        ];
+
+       function loadTableData() {
+    const savedData = JSON.parse(localStorage.getItem('aritmeticosData')) || initialData;
+    aritmeticosTable.innerHTML = '';
+    savedData.forEach(row => addRowToTable(row));
+    updateChart();
+}
+
+
+        function saveTableData() {
+    const rows = Array.from(aritmeticosTable.rows).map(row =>
+        Array.from(row.cells).slice(0, -1).map(cell => cell.textContent)
+    );
+    localStorage.setItem('aritmeticosData', JSON.stringify(rows));
+}
+
+
+       function addRowToTable(data) {
+    const row = document.createElement('tr');
+    data.forEach(text => {
+        const cell = document.createElement('td');
+        cell.contentEditable = true;
+        cell.textContent = text;
+        row.appendChild(cell);
+    });
+    const actionsCell = document.createElement('td');
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Eliminar';
+    deleteButton.style.backgroundColor = '#e63946';
+    deleteButton.style.color = 'white';
+    deleteButton.style.border = 'none';
+    deleteButton.style.borderRadius = '4px';
+    deleteButton.style.padding = '5px';
+    deleteButton.addEventListener('click', () => {
+        row.remove();
+        saveTableData();
+        updateChart();
+    });
+    actionsCell.appendChild(deleteButton);
+    row.appendChild(actionsCell);
+    aritmeticosTable.appendChild(row);
+}
+
+
+        function addRow(tableId) {
+            const tableBody = document.getElementById(tableId).querySelector('tbody');
+            const row = ["Escribir Nombres", "Escribir apellidos", "Escribir datos ", "Escribir correo"];
+            addRowToTable(row);
+            saveTableData();
+            updateChart();
+        }
+
+        function updateChart() {
+            const labels = Array.from(aritmeticosTable.rows).map(row => row.cells[0].textContent);
+            const data = labels.map(() => 1); // Igual peso a cada fila
+            const backgroundColor = labels.map((_, index) => `hsl(${index * 40}, 70%, 70%)`);
+
+            if (chartInstance) {
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = data;
+                chartInstance.data.datasets[0].backgroundColor = backgroundColor;
+                chartInstance.update();
+            }
+        }
+
+        let chartInstance = new Chart(chartCanvas.getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Operadores',
+                    data: [],
+                    backgroundColor: []
+                }]
+            },
+            options: {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (tooltipItem) => {
+                                const total = tooltipItem.dataset.data.reduce((acc, val) => acc + val, 0);
+                                const percentage = ((tooltipItem.raw / total) * 100).toFixed(2);
+                                return `${tooltipItem.label}: ${percentage}%`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Búsqueda
+        document.getElementById('searchInput').addEventListener('input', e => {
+            const filter = e.target.value.toLowerCase();
+            Array.from(aritmeticosTable.rows).forEach(row => {
+                row.style.display = Array.from(row.cells).some(cell =>
+                    cell.textContent.toLowerCase().includes(filter)
+                ) ? '' : 'none';
+            });
+        });
+
+        // Alternar visibilidad de tablas
+        function toggleTableVisibility(id) {
+            const table = document.getElementById(id);
+            table.style.display = table.style.display === 'none' ? '' : 'none';
+        }
+
+        // Cargar datos al inicio
+        loadTableData();
+
+// Detectar cambios en celdas
+aritmeticosTable.addEventListener('input', () => {
+    saveTableData();
+    updateChart();
+});
+
+// Detectar cuando se sale de una celda editada
+aritmeticosTable.addEventListener('blur', (event) => {
+    if (event.target.tagName === 'TD') {
+        saveTableData();
+    }
+}, true);
+
+
+    </script>
+</body>
+</html>
