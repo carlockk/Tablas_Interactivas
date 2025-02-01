@@ -1,5 +1,5 @@
 
-# Tablas interactivas
+# Tabla interactiva
 
 Es una tabla hecha solo en javascript y que guarda todo en la memoria del navegador
 
